@@ -2,22 +2,39 @@ package main
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/srcabl/sources/internal/bootstrap"
-	"github.com/srcabl/sources/internal/config"
+	"github.com/srcabl/services/pkg/config"
+	"github.com/srcabl/sources/internal/boot"
 )
 
 func main() {
-
-	cfg, err := config.New()
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	cfg, err := config.NewService(fmt.Sprintf("%s/config.yml", dir))
 	if err != nil {
 		panic(err)
 	}
 
-	boot, err := bootstrap.New(cfg)
+	strap, err := boot.New(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("boot: %+v", boot)
+	err = strap.Connect()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		errs := strap.Shutdown()
+		if errs != nil {
+			msg := "ERRORS ON SHUTDOWN:"
+			for e := range errs {
+				msg += fmt.Sprintf(" - %+v", e)
+			}
+			panic(msg)
+		}
+	}()
 }
